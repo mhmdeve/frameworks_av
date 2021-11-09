@@ -25,7 +25,7 @@
 #include <cstring>
 #include <ctime>
 #include <string>
-#ifdef CAMERA_NEEDS_CLIENT_INFO
+#ifdef TARGET_CAMERA_NEEDS_CLIENT_INFO
 #include <iostream>
 #include <fstream>
 #endif
@@ -82,6 +82,10 @@
 #include "utils/CameraThreadState.h"
 #include "utils/CameraServiceProxyWrapper.h"
 
+#ifdef TARGET_CAMERA_NEEDS_CLIENT_INFO
+#include <vendor/oneplus/hardware/camera/1.0/IOnePlusCameraProvider.h>
+#endif
+
 namespace {
     const char* kPermissionServiceName = "permission";
 }; // namespace anonymous
@@ -102,7 +106,9 @@ using hardware::camera2::ICameraInjectionCallback;
 using hardware::camera2::ICameraInjectionSession;
 using hardware::camera2::utils::CameraIdAndSessionConfiguration;
 using hardware::camera2::utils::ConcurrentCameraIdCombination;
-
+#ifdef TARGET_CAMERA_NEEDS_CLIENT_INFO
+using ::vendor::oneplus::hardware::camera::V1_0::IOnePlusCameraProvider;
+#endif
 // ----------------------------------------------------------------------------
 // Logging support -- this is for debugging only
 // Use "adb shell dumpsys media.camera -v 1" to change it.
@@ -139,6 +145,9 @@ static const String16 sCameraOpenCloseListenerPermission(
 static const String16
         sCameraInjectExternalCameraPermission("android.permission.CAMERA_INJECT_EXTERNAL_CAMERA");
 const char *sFileName = "lastOpenSessionDumpFile";
+#ifdef TARGET_CAMERA_NEEDS_CLIENT_INFO
+static const sp<IOnePlusCameraProvider> gVendorCameraProviderService = IOnePlusCameraProvider::getService();
+#endif
 static constexpr int32_t kVendorClientScore = resource_policy::PERCEPTIBLE_APP_ADJ;
 static constexpr int32_t kVendorClientState = ActivityManager::PROCESS_STATE_PERSISTENT_UI;
 
@@ -3224,10 +3233,8 @@ status_t CameraService::BasicClient::startCameraOps() {
     // Notify listeners of camera open/close status
     sCameraService->updateOpenCloseStatus(mCameraIdStr, true/*open*/, mClientPackageName);
 
-#ifdef CAMERA_NEEDS_CLIENT_INFO
-    std::ofstream cpf("/data/misc/evolution/client_package_name");
-    std::string cpn = String8(mClientPackageName).string();
-    cpf << cpn;
+#ifdef TARGET_CAMERA_NEEDS_CLIENT_INFO
+    gVendorCameraProviderService->setPackageName(String8(mClientPackageName).string());
 #endif
     return OK;
 }
